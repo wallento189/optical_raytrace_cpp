@@ -104,6 +104,10 @@ tr:hover { background:#1a1a3e; }
     </select>
     <button onclick="runPreview()" class="small">预览</button>
   </div>
+  <div class="row" style="margin-top:6px">
+    <div><label>输出文件路径</label><input id="output_path" value="outputs/result_76.txt" placeholder="outputs/result_76.txt"></div>
+    <div><label>输入文件路径 (compute模式)</label><input id="input_path" placeholder="examples/test_infinity.json"></div>
+  </div>
   <div class="status" id="status">就绪</div>
 
   <div style="margin-top:8px">
@@ -129,7 +133,7 @@ tr:hover { background:#1a1a3e; }
       <option value="{{ o }}">{{ o }}</option>
       {% endfor %}
     </select>
-    <button class="small" onclick="loadResults('outputs/result_76.txt')">刷新</button>
+    <button class="small" onclick="refreshResults()">刷新</button>
     <button class="small" onclick="downloadResults()">⬇ 下载</button>
     <span style="margin-left:8px;font-size:11px;">过滤:</span>
     <select onchange="filterResults(this.value)" style="width:auto;">
@@ -233,6 +237,8 @@ function buildConfig(){
     var rn = parseFloat(r);
     return {radius: isNaN(rn) ? r : rn, thickness: parseFloat(s.thickness), material_after: s.material_after};
   });
+  c.output = $('output_path').value || '';
+  c.input = $('input_path').value || '';
   return c;
 }
 
@@ -270,6 +276,8 @@ function jsonToForm(){
       surfaces.push({radius:''+s.radius, thickness:''+s.thickness, material_after:s.material_after});
     });
     renderForm();
+    $('output_path').value = c.output || 'outputs/result_76.txt';
+    $('input_path').value = c.input || '';
   } catch(e) { alert('JSON 解析错误: ' + e); }
 }
 
@@ -331,13 +339,19 @@ async function runCompute(){
     try { j = JSON.parse(text); } catch(e) { $('status').textContent = '✗ 服务器返回异常: '+text.substring(0,200); return; }
     if(j.ok){
       $('status').textContent = '✓ 完成';
-      if(j.mode === 'compute76') loadResults('outputs/result_76.txt');
-      else {
+      if(j.mode === 'compute76'){
+        if(j.file_exists === false){
+          $('status').textContent = '✗ 计算结果文件未生成. 错误: '+(j.stderr||'未知');
+        }
+        loadResults(j.output);
+      } else {
         var tbody = $('result_table').querySelector('tbody');
         tbody.innerHTML = '<tr><td colspan="5"><pre>'+j.stdout+'</pre></td></tr>';
       }
     } else {
-      $('status').textContent = '✗ 错误: '+ (j.stderr||j.error||j.trace||'');
+      var errMsg = j.stderr || j.error || '';
+      if(!errMsg && j.trace) errMsg = j.trace.substring(0,500);
+      $('status').textContent = '✗ 错误: '+ errMsg;
     }
   } catch(e) { $('status').textContent = '请求失败: '+e; }
 }
@@ -358,15 +372,21 @@ async function runPreview(){
 
 async function loadResults(fname){
   if(!fname) return;
+  window._currentResultFile = fname;
   try {
     var r = await fetch('/api/results?file='+encodeURIComponent(fname));
     var text = await r.text();
     var j;
     try { j = JSON.parse(text); } catch(e) { $('result_status').textContent = '解析失败'; return; }
-    if(j.error){ alert(j.error); return; }
+    if(j.error){ $('result_status').textContent = '✗ '+j.error; return; }
     renderResults(j.rows);
     $('result_status').textContent = j.rows.length+' 行 | '+j.file;
-  } catch(e) { $('result_status').textContent = '加载失败'; }
+  } catch(e) { $('result_status').textContent = '加载失败: '+e; }
+}
+
+function refreshResults(){
+  if(window._currentResultFile) loadResults(window._currentResultFile);
+  else loadResults('result_76.txt');
 }
 
 function renderResults(rows){
@@ -387,7 +407,8 @@ function filterResults(val){
 }
 
 function downloadResults(){
-  window.open('/api/download?file='+encodeURIComponent('outputs/result_76.txt'), '_blank');
+  var f = window._currentResultFile || 'result_76.txt';
+  window.open('/api/download?file='+encodeURIComponent(f), '_blank');
 }
 
 renderForm();

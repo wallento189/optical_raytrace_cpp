@@ -94,9 +94,13 @@ def run():
             args.append("--print")
         out = config.get("output", "")
         if out:
-            args += ["--output", str(BASE / out)]
+            out_path = Path(out)
+            if not out_path.is_absolute():
+                out_path = OUTPUTS / out_path.name
+            args += ["--output", str(out_path)]
+            out = str(out_path)
         stdout, stderr, rc = run_binary("compute", args)
-        return jsonify({"ok": rc == 0, "stdout": stdout, "stderr": stderr, "mode": "compute"})
+        return jsonify({"ok": rc == 0, "stdout": stdout, "stderr": stderr, "output": out, "mode": "compute"})
 
     elif mode == "compute76":
         inf = config.get("infinity", "")
@@ -115,7 +119,10 @@ def run():
             fin = str(fin_path)
             with open(fin_path, "w") as f: f.write(data.get("finite_json", "{}"))
 
-        if not os.path.isabs(out): out = str(BASE / out)
+        out_path = Path(out)
+        if not out_path.is_absolute():
+            out_path = OUTPUTS / out_path.name
+        out = str(out_path)
 
         args = ["--infinity", inf, "--finite", fin, "--output", out]
         if print_config: args.append("--print")
@@ -124,20 +131,22 @@ def run():
         if rc != 0:
             return jsonify({"ok": False, "stdout": stdout, "stderr": stderr, "mode": "compute76"})
 
-        return jsonify({"ok": True, "stdout": stdout, "stderr": stderr, "output": out, "mode": "compute76"})
+        file_exists = out_path.exists()
+        return jsonify({"ok": True, "stdout": stdout, "stderr": stderr, "output": out, "file_exists": file_exists, "mode": "compute76"})
 
     return jsonify({"ok": False, "error": f"Unknown mode: {mode}"})
 
 @app.route("/api/results")
 def get_results():
     fname = request.args.get("file", str(OUTPUTS / "result_76.txt"))
-    if not os.path.isabs(fname):
-        fname = str(BASE / fname)
-    if not os.path.exists(fname):
-        return jsonify({"error": f"No results file: {fname}"}), 404
+    path = Path(fname)
+    if not path.is_absolute():
+        path = OUTPUTS / path.name
+    if not path.exists():
+        return jsonify({"error": f"No results file: {path}"}), 404
 
     rows = []
-    with open(fname) as f:
+    with open(path) as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith("#") or line.startswith("--") or line.startswith("case"):
@@ -170,15 +179,16 @@ def get_results():
                 "value": value,
                 "unit": unit
             })
-    return jsonify({"rows": rows, "file": fname})
+    return jsonify({"rows": rows, "file": str(path)})
 
 @app.route("/api/download")
 def download():
     fname = request.args.get("file", "")
-    if not os.path.isabs(fname):
-        fname = str(BASE / fname)
-    if os.path.exists(fname):
-        return send_file(fname, as_attachment=True, download_name=os.path.basename(fname))
+    path = Path(fname)
+    if not path.is_absolute() and fname:
+        path = OUTPUTS / path.name
+    if path.exists():
+        return send_file(path, as_attachment=True, download_name=path.name)
     return jsonify({"error": "not found"}), 404
 
 @app.route("/api/preview", methods=["POST"])
