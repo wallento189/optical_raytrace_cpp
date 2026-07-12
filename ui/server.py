@@ -39,7 +39,7 @@ def handle_exception(e):
 
 def run_binary(mode, args):
     cmd = [str(BINARY), mode] + args
-    kwargs = dict(capture_output=True, text=True, timeout=60, cwd=str(BASE))
+    kwargs = dict(capture_output=True, text=True, encoding='utf-8', timeout=60, cwd=str(BASE))
     if _IS_WIN:
         kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
     result = subprocess.run(cmd, **kwargs)
@@ -59,7 +59,7 @@ def load_config():
         path = os.path.join(str(BASE), fname)
     if not os.path.exists(path):
         return jsonify({"error": f"File not found: {fname}"}), 404
-    with open(path) as f:
+    with open(path, encoding='utf-8') as f:
         return jsonify(json.load(f))
 
 @app.route("/api/save_config", methods=["POST"])
@@ -67,7 +67,7 @@ def save_config():
     data = request.get_json()
     fname = data.pop("_filename", "custom.json")
     path = OUTPUTS / fname
-    with open(path, "w") as f:
+    with open(path, "w", encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     return jsonify({"ok": True, "path": str(path)})
 
@@ -111,13 +111,13 @@ def run():
             if not os.path.isabs(inf): inf = str(BASE / inf)
         else:
             inf = str(inf_path)
-            with open(inf_path, "w") as f: f.write(data.get("infinity_json", "{}"))
+            with open(inf_path, "w", encoding='utf-8') as f: f.write(data.get("infinity_json", "{}"))
 
         if fin:
             if not os.path.isabs(fin): fin = str(BASE / fin)
         else:
             fin = str(fin_path)
-            with open(fin_path, "w") as f: f.write(data.get("finite_json", "{}"))
+            with open(fin_path, "w", encoding='utf-8') as f: f.write(data.get("finite_json", "{}"))
 
         out_path = Path(out)
         if not out_path.is_absolute():
@@ -146,7 +146,7 @@ def get_results():
         return jsonify({"error": f"No results file: {path}"}), 404
 
     rows = []
-    with open(path) as f:
+    with open(path, encoding='utf-8') as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith("#") or line.startswith("--") or line.startswith("case"):
@@ -195,7 +195,7 @@ def download():
 def preview():
     data = request.get_json()
     tmp = OUTPUTS / "_preview.json"
-    with open(tmp, "w") as f:
+    with open(tmp, "w", encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     out, err, rc = run_binary("compute", ["--input", str(tmp), "--print"])
     return jsonify({"ok": rc == 0, "stdout": out, "stderr": err})
