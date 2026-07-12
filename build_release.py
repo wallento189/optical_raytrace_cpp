@@ -19,7 +19,13 @@ import subprocess
 import platform
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+        
 ROOT = Path(__file__).resolve().parent
 DIST = ROOT / "dist"
 BUILD_DIR = ROOT / "build"
@@ -140,7 +146,7 @@ def step_summary():
 
 
 def main():
-    print(f"光学追迹 Release Builder — {platform.system()} {platform.machine()}")
+    print(f"光学追迹 Release Builder  {platform.system()} {platform.machine()}")
     print(f"Python: {sys.version.split()[0]}")
     print()
 
