@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=光学追迹
+Name[en]=Optical Raytracer
+Comment=共轴球面光学系统光线追迹与像差计算
+Comment[en]=Coaxial spherical optical system ray tracing and aberration computation
+Exec=optical_raytrace_ui
+Terminal=false
+Categories=Science;Engineering;Education;
+StartupWMClass=optical_raytrace_ui

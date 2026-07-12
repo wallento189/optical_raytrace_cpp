@@ -1,0 +1,7 @@
+{
+  "mode": "compute76",
+  "infinity": "examples/test_infinity.json",
+  "finite": "examples/test_finite.json",
+  "output": "outputs/result_76.txt",
+  "print": false
+}

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>光学追迹 — 共轴球面系统</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font:14px/1.5 'Segoe UI',monospace; background:#1a1a2e; color:#e0e0e0; display:flex; height:100vh; }
+.left { width:420px; min-width:320px; background:#16213e; overflow-y:auto; padding:12px; border-right:2px solid #0f3460; }
+.right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.toolbar { padding:8px 12px; background:#0f3460; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.table-wrap { flex:1; overflow:auto; padding:4px; }
+h3 { color:#e94560; margin:8px 0 4px; font-size:14px; }
+label { display:block; font-size:11px; color:#8899aa; margin-top:6px; }
+input,select,textarea { width:100%; padding:5px 8px; background:#1a1a2e; border:1px solid #333; color:#e0e0e0; font:13px monospace; border-radius:3px; margin-top:2px; }
+input:focus,select:focus,textarea:focus { border-color:#e94560; outline:none; }
+button { padding:8px 16px; background:#e94560; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; }
+button:hover { background:#ff6b81; }
+button:disabled { background:#555; cursor:default; }
+button.small { padding:4px 10px; font-size:12px; }
+.row { display:flex; gap:6px; }
+.row>*:first-child { flex:1; }
+.surface-row { display:flex; gap:4px; align-items:center; margin-top:3px; background:#1a1a2e; padding:4px 6px; border-radius:3px; }
+.surface-row label { margin:0; font-size:10px; white-space:nowrap; }
+.surface-row input { width:80px; padding:2px 4px; font-size:11px; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th,td { padding:3px 8px; text-align:left; border-bottom:1px solid #222; white-space:nowrap; }
+th { background:#0f3460; position:sticky; top:0; z-index:1; }
+tr:hover { background:#1a1a3e; }
+.case-infinity { color:#4ecdc4; }
+.case-finite { color:#f7b731; }
+.val-ok { color:#44bd32; }
+.val-warn { color:#f39c12; }
+.val-err { color:#e94560; }
+.status { font-size:11px; color:#889; padding:4px 8px; }
+.tabs { display:flex; gap:4px; margin-bottom:8px; }
+.tab { padding:4px 12px; background:#1a1a2e; border:1px solid #333; cursor:pointer; border-radius:4px 4px 0 0; }
+.tab.active { background:#0f3460; border-color:#e94560; }
+.editor-panel { display:none; }
+.editor-panel.active { display:block; }
+.mtrl-row { display:flex; gap:6px; align-items:center; margin-top:3px; }
+.mtrl-row span { min-width:60px; font-size:12px; }
+.mtrl-row input { width:100px; padding:2px 4px; font-size:11px; }
+</style>
+</head>
+<body>
+
+<div class="left">
+  <h3>⚙ 光学追迹控制台</h3>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('config')">配置</div>
+    <div class="tab" onclick="switchTab('json')">JSON</div>
+  </div>
+
+  <div id="panel-config" class="editor-panel active">
+    <div class="row">
+      <div><label>系统名称</label><input id="system_name" value="custom"></div>
+    </div>
+    <div class="row">
+      <div><label>物距类型</label><select id="object_at_infinity" onchange="toggleConjugate()">
+        <option value="true">无限远 (∞)</option>
+        <option value="false">有限距</option>
+      </select></div>
+    </div>
+    <div class="row" id="row_infinity">
+      <div><label>半视场角 (°)</label><input id="field_angle_deg" value="3.0"></div>
+    </div>
+    <div class="row" id="row_finite" style="display:none">
+      <div><label>物距 L (mm)</label><input id="object_distance" value="-500"></div>
+      <div><label>物高 (mm)</label><input id="object_height" value="26.204"></div>
+    </div>
+    <div class="row">
+      <div><label>入瞳位置 (mm)</label><input id="entrance_pupil_position" value="0"></div>
+      <div><label>入瞳直径 (mm)</label><input id="entrance_pupil_diameter" value="20"></div>
+    </div>
+    <div class="row">
+      <div><label>光阑面号</label><input id="stop_surface" value="1"></div>
+      <div><label>视场比例</label><input id="field_ratios" value="0.0, 0.7, 1.0"></div>
+    </div>
+    <div class="row">
+      <div><label>孔径比例</label><input id="aperture_ratios" value="-1.0, -0.7, 0.0, 0.7, 1.0"></div>
+      <div><label>波长</label><input id="wavelength_types" value="d, F, C"></div>
+    </div>
+
+    <h4>材料库 <button class="small" onclick="addMaterial()">+</button></h4>
+    <div id="materials"></div>
+
+    <h4>面型 <button class="small" onclick="addSurface()">+ 添加面</button></h4>
+    <div id="surfaces"></div>
+  </div>
+
+  <div id="panel-json" class="editor-panel">
+    <textarea id="json_raw" rows="20" style="font-size:11px;"></textarea>
+    <button class="small" style="margin-top:4px" onclick="jsonToForm()">JSON → 表单</button>
+  </div>
+
+  <div style="margin-top:12px; display:flex; gap:8px;">
+    <button onclick="runCompute()">▶ 运行</button>
+    <select id="run_mode">
+      <option value="compute76">compute76 (76项)</option>
+      <option value="compute">compute (38项)</option>
+    </select>
+    <button onclick="runPreview()" class="small">预览</button>
+  </div>
+  <div class="status" id="status">就绪</div>
+
+  <div style="margin-top:8px">
+    <label>加载示例</label>
+    <select onchange="loadExample(this.value)">
+      <option value="">-- 选择 --</option>
+      {% for e in examples %}
+      <option value="{{ e }}">{{ e }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div style="margin-top:8px">
+    <button class="small" onclick="saveConfig()">💾 保存配置</button>
+    <input id="save_filename" placeholder="custom.json" style="width:120px;display:inline;">
+  </div>
+</div>
+
+<div class="right">
+  <div class="toolbar">
+    <select onchange="loadResults(this.value)" style="width:auto;min-width:200px;">
+      <option value="">-- 选择结果文件 --</option>
+      {% for o in outputs %}
+      <option value="{{ o }}">{{ o }}</option>
+      {% endfor %}
+    </select>
+    <button class="small" onclick="loadResults('outputs/result_76.txt')">刷新</button>
+    <button class="small" onclick="downloadResults()">⬇ 下载</button>
+    <span style="margin-left:8px;font-size:11px;">过滤:</span>
+    <select onchange="filterResults(this.value)" style="width:auto;">
+      <option value="all">全部</option>
+      <option value="infinity">infinity</option>
+      <option value="finite">finite</option>
+    </select>
+    <span class="status" id="result_status"></span>
+  </div>
+  <div class="table-wrap">
+    <table id="result_table">
+      <thead><tr><th>Case</th><th>#</th><th>Name</th><th>Value</th><th>Unit</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function $(id){ return document.getElementById(id); }
+function byClass(cls){ return document.getElementsByClassName(cls); }
+
+function toggleConjugate(){
+  var inf = $('object_at_infinity').value === 'true';
+  $('row_infinity').style.display = inf ? '' : 'none';
+  $('row_finite').style.display = inf ? 'none' : '';
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.editor-panel').forEach(p=>p.classList.remove('active'));
+  event.target.classList.add('active');
+  if(name==='json') formToJson();
+  $('panel-'+name).classList.add('active');
+}
+
+let materials = [
+  {name:'AIR',nd:'1.0',nF:'1.0',nC:'1.0'},
+  {name:'H-K9L',nd:'1.5167999978',nF:'1.522376461',nC:'1.5143264578'},
+  {name:'H-ZF2',nd:'1.672699817',nF:'1.6875273179',nC:'1.6666173079'}
+];
+
+let surfaces = [
+  {radius:'62.5',thickness:'4.0',material_after:'H-K9L'},
+  {radius:'-43.65',thickness:'2.5',material_after:'H-ZF2'},
+  {radius:'-124.35',thickness:'0.0',material_after:'AIR'}
+];
+
+function renderForm(){
+  var h='';
+  materials.forEach(function(m,i){
+    h += '<div class="mtrl-row"><span>'+m.name+'</span>';
+    h += '<input value="'+m.nd+'" onchange="materials['+i+'].nd=this.value"> d';
+    h += '<input value="'+m.nF+'" onchange="materials['+i+'].nF=this.value"> F';
+    h += '<input value="'+m.nC+'" onchange="materials['+i+'].nC=this.value"> C';
+    h += '<button class="small" onclick="materials.splice('+i+',1);renderForm()">×</button>';
+    h += '</div>';
+  });
+  $('materials').innerHTML = h;
+
+  h = '';
+  surfaces.forEach(function(s,i){
+    h += '<div class="surface-row"><span>#'+(i+1)+'</span>';
+    h += '<label>R<sub>'+s.radius+'</sub></label><input value="'+s.radius+'" onchange="surfaces['+i+'].radius=this.value">';
+    h += '<label>d</label><input value="'+s.thickness+'" onchange="surfaces['+i+'].thickness=this.value">';
+    h += '<label>材料</label><input value="'+s.material_after+'" onchange="surfaces['+i+'].material_after=this.value" style="width:70px">';
+    h += '<button class="small" onclick="surfaces.splice('+i+',1);renderForm()">×</button>';
+    h += '</div>';
+  });
+  $('surfaces').innerHTML = h;
+}
+
+function addMaterial(){ materials.push({name:'NEW',nd:'1.5',nF:'1.51',nC:'1.49'}); renderForm(); }
+function addSurface(){ surfaces.push({radius:'inf',thickness:'0',material_after:'AIR'}); renderForm(); }
+
+function buildConfig(){
+  var c = {};
+  c.system_name = $('system_name').value;
+  c.object_at_infinity = $('object_at_infinity').value === 'true';
+  if(c.object_at_infinity){
+    c.field_angle_deg = parseFloat($('field_angle_deg').value);
+    c.object_distance = null;
+    c.object_height = null;
+  } else {
+    c.object_distance = parseFloat($('object_distance').value);
+    c.object_height = parseFloat($('object_height').value);
+    c.field_angle_deg = null;
+  }
+  c.entrance_pupil_position = parseFloat($('entrance_pupil_position').value);
+  c.entrance_pupil_diameter = parseFloat($('entrance_pupil_diameter').value);
+  c.stop_surface = parseInt($('stop_surface').value);
+  c.field_ratios = $('field_ratios').value.split(',').map(parseFloat);
+  c.aperture_ratios = $('aperture_ratios').value.split(',').map(parseFloat);
+  c.wavelength_types = $('wavelength_types').value.split(',').map(s=>s.trim());
+
+  var matObj = {};
+  materials.forEach(function(m){ matObj[m.name] = {nd: parseFloat(m.nd), nF: parseFloat(m.nF), nC: parseFloat(m.nC)}; });
+  c.materials = matObj;
+
+  c.surfaces = surfaces.map(function(s){
+    var r = s.radius;
+    var rn = parseFloat(r);
+    return {radius: isNaN(rn) ? r : rn, thickness: parseFloat(s.thickness), material_after: s.material_after};
+  });
+  return c;
+}
+
+function formToJson(){
+  var c = buildConfig();
+  $('json_raw').value = JSON.stringify(c, null, 2);
+}
+
+function jsonToForm(){
+  try {
+    var c = JSON.parse($('json_raw').value);
+    $('system_name').value = c.system_name || '';
+    $('object_at_infinity').value = c.object_at_infinity ? 'true' : 'false';
+    toggleConjugate();
+    if(c.object_at_infinity){
+      $('field_angle_deg').value = c.field_angle_deg || 3;
+    } else {
+      $('object_distance').value = c.object_distance || -500;
+      $('object_height').value = c.object_height || 26;
+    }
+    $('entrance_pupil_position').value = c.entrance_pupil_position || 0;
+    $('entrance_pupil_diameter').value = c.entrance_pupil_diameter || 20;
+    $('stop_surface').value = c.stop_surface || 1;
+    $('field_ratios').value = (c.field_ratios||[0,0.7,1]).join(', ');
+    $('aperture_ratios').value = (c.aperture_ratios||[-1,-0.7,0,0.7,1]).join(', ');
+    $('wavelength_types').value = (c.wavelength_types||['d','F','C']).join(', ');
+
+    materials = [];
+    if(c.materials) Object.keys(c.materials).forEach(function(k){
+      var m = c.materials[k];
+      materials.push({name:k, nd:''+m.nd, nF:''+m.nF, nC:''+m.nC});
+    });
+    surfaces = [];
+    if(c.surfaces) c.surfaces.forEach(function(s){
+      surfaces.push({radius:''+s.radius, thickness:''+s.thickness, material_after:s.material_after});
+    });
+    renderForm();
+  } catch(e) { alert('JSON 解析错误: ' + e); }
+}
+
+async function loadExample(fname){
+  if(!fname) return;
+  try {
+    var r = await fetch('/api/load_config?file='+encodeURIComponent(fname));
+    var text = await r.text();
+    var c;
+    try { c = JSON.parse(text); } catch(e) { $('status').textContent = '加载解析失败'; return; }
+    if(c.error){ alert(c.error); return; }
+    $('json_raw').value = JSON.stringify(c, null, 2);
+    jsonToForm();
+    $('status').textContent = '已加载: '+fname;
+  } catch(e) { $('status').textContent = '加载失败: '+e; }
+}
+
+async function saveConfig(){
+  var fname = $('save_filename').value || 'custom.json';
+  var c = buildConfig();
+  c._filename = fname;
+  try {
+    var r = await fetch('/api/save_config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(c)});
+    var text = await r.text();
+    var j;
+    try { j = JSON.parse(text); } catch(e) { $('status').textContent = '保存解析失败'; return; }
+    $('status').textContent = j.ok ? '已保存: '+j.path : '保存失败';
+    location.reload();
+  } catch(e) { $('status').textContent = '保存失败: '+e; }
+}
+
+async function runCompute(){
+  $('status').textContent = '计算中...';
+  var mode = $('run_mode').value;
+  var c = buildConfig();
+
+  var body = {mode: mode, config: c};
+  if(mode === 'compute76'){
+    var infCopy = JSON.parse(JSON.stringify(c));
+    infCopy.object_at_infinity = true;
+    infCopy.object_distance = null;
+    infCopy.object_height = null;
+    if(!infCopy.field_angle_deg) infCopy.field_angle_deg = 3.0;
+
+    var finCopy = JSON.parse(JSON.stringify(c));
+    finCopy.object_at_infinity = false;
+    finCopy.field_angle_deg = null;
+    if(!finCopy.object_distance) finCopy.object_distance = -500;
+    if(!finCopy.object_height) finCopy.object_height = 26.204;
+
+    body.infinity_json = JSON.stringify(infCopy);
+    body.finite_json = JSON.stringify(finCopy);
+  }
+
+  try {
+    var r = await fetch('/api/run', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    var text = await r.text();
+    var j;
+    try { j = JSON.parse(text); } catch(e) { $('status').textContent = '✗ 服务器返回异常: '+text.substring(0,200); return; }
+    if(j.ok){
+      $('status').textContent = '✓ 完成';
+      if(j.mode === 'compute76') loadResults('outputs/result_76.txt');
+      else {
+        var tbody = $('result_table').querySelector('tbody');
+        tbody.innerHTML = '<tr><td colspan="5"><pre>'+j.stdout+'</pre></td></tr>';
+      }
+    } else {
+      $('status').textContent = '✗ 错误: '+ (j.stderr||j.error||j.trace||'');
+    }
+  } catch(e) { $('status').textContent = '请求失败: '+e; }
+}
+
+async function runPreview(){
+  $('status').textContent = '预览中...';
+  var c = buildConfig();
+  try {
+    var r = await fetch('/api/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(c)});
+    var text = await r.text();
+    var j;
+    try { j = JSON.parse(text); } catch(e) { $('status').textContent = '✗ 预览解析失败'; return; }
+    var tbody = $('result_table').querySelector('tbody');
+    tbody.innerHTML = '<tr><td colspan="5"><pre style="max-height:400px;overflow:auto">'+(j.stdout||j.stderr||j.error||'')+'</pre></td></tr>';
+    $('status').textContent = j.ok ? '预览完成' : '预览警告';
+  } catch(e) { $('status').textContent = '预览失败: '+e; }
+}
+
+async function loadResults(fname){
+  if(!fname) return;
+  try {
+    var r = await fetch('/api/results?file='+encodeURIComponent(fname));
+    var text = await r.text();
+    var j;
+    try { j = JSON.parse(text); } catch(e) { $('result_status').textContent = '解析失败'; return; }
+    if(j.error){ alert(j.error); return; }
+    renderResults(j.rows);
+    $('result_status').textContent = j.rows.length+' 行 | '+j.file;
+  } catch(e) { $('result_status').textContent = '加载失败'; }
+}
+
+function renderResults(rows){
+  var tbody = $('result_table').querySelector('tbody');
+  var filter = document.querySelector('.toolbar select:last-of-type')?.value || 'all';
+  tbody.innerHTML = '';
+  rows.forEach(function(r){
+    if(filter !== 'all' && r.case !== filter) return;
+    var cls = r.case === 'infinity' ? 'case-infinity' : (r.case==='finite'?'case-finite':'');
+    tbody.innerHTML += '<tr><td class="'+cls+'">'+r.case+'</td><td>'+r.order+'</td><td>'+r.name+'</td><td>'+r.value+'</td><td>'+r.unit+'</td></tr>';
+  });
+  window._allRows = rows;
+}
+
+function filterResults(val){
+  window._filterVal = val;
+  if(window._allRows) renderResults(window._allRows);
+}
+
+function downloadResults(){
+  window.open('/api/download?file='+encodeURIComponent('outputs/result_76.txt'), '_blank');
+}
+
+renderForm();
+toggleConjugate();
+</script>
+</body>
+</html>

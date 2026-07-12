@@ -1,0 +1,47 @@
+{
+  "system_name": "H-K9L_H-ZF2_doublet_infinity",
+  "object_at_infinity": true,
+  "object_distance": null,
+  "field_angle_deg": 3.0,
+  "object_height": null,
+  "entrance_pupil_position": 0.0,
+  "entrance_pupil_diameter": 20.0,
+  "stop_surface": 1,
+  "field_ratios": [0.0, 0.707, 1.0],
+  "aperture_ratios": [-1.0, -0.707, 0.0, 0.707, 1.0],
+  "wavelength_types": ["d", "F", "C"],
+  "materials": {
+    "AIR": {
+      "nd": 1.0,
+      "nF": 1.0,
+      "nC": 1.0
+    },
+    "H-K9L": {
+      "nd": "PLEASE_FILL_nd",
+      "nF": "PLEASE_FILL_nF",
+      "nC": "PLEASE_FILL_nC"
+    },
+    "H-ZF2": {
+      "nd": "PLEASE_FILL_nd",
+      "nF": "PLEASE_FILL_nF",
+      "nC": "PLEASE_FILL_nC"
+    }
+  },
+  "surfaces": [
+    {
+      "radius": 62.5,
+      "thickness": 4.0,
+      "material_after": "H-K9L"
+    },
+    {
+      "radius": -43.65,
+      "thickness": 2.5,
+      "material_after": "H-ZF2"
+    },
+    {
+      "radius": -124.35,
+      "thickness": 0.0,
+      "material_after": "AIR"
+    }
+  ]
+}
