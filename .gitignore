@@ -6,3 +6,6 @@ outputs/
 run
 *.pyc
 __pycache__
+软件设计报告.pdf
+软件设计报告.typ
+AGENTS.md
