@@ -14,18 +14,20 @@ if _FROZEN:
     BINARY = _BUNDLE_DIR / "bin" / _BIN_NAME
     EXAMPLES = _BUNDLE_DIR / "examples"
     BASE = _BUNDLE_DIR
+    TEMPLATES = _BUNDLE_DIR / "templates"
     OUTPUTS = Path.home() / ".optical_raytrace" / "outputs"
 else:
     BASE = Path(__file__).resolve().parent.parent
     BINARY = BASE / "build" / "bin" / _BIN_NAME
     EXAMPLES = BASE / "examples"
+    TEMPLATES = BASE / "ui" / "templates"
     OUTPUTS = BASE / "outputs"
 
 OUTPUTS.mkdir(parents=True, exist_ok=True)
 
 app = Flask(
     __name__,
-    template_folder=str(BASE / "ui" / "templates"),
+    template_folder=str(TEMPLATES),
     static_folder=str(BASE / "static"),
 )
 

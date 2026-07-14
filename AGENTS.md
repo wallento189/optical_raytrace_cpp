@@ -24,11 +24,26 @@ cmake --build build
 ## Dependencies
 
 - **C++**: nlohmann/json vendored at `third_party/json.hpp` (single header, no package install).
+- **Python**: Flask (`pip install flask`). No other Python deps.
 - C++17, compiler with standard library (g++/clang++/MSVC).
+
+## Distribution (PyInstaller)
+
+```bash
+# One-shot: builds C++ binary + packages everything into a single executable
+python3 build_release.py
+
+# Output: dist/optical_raytrace_ui  (~10 MB self-contained)
+# Users can double-click to launch — no Python/compiler needed.
+```
+
+- `optical_raytrace.spec` defines the PyInstaller bundle (binary + templates + examples).
+- `server.py` auto-detects `sys.frozen` to switch resource paths between dev and bundled mode.
 
 ## CI/CD (GitHub Actions)
 
-- `.github/workflows/release.yml` builds C++ artifacts for Linux, Windows, and macOS on every push.
+- `.github/workflows/release.yml` builds PyInstaller artifacts for Linux, Windows, and macOS on every push.
+- Uses `actions/setup-python@v5` + `actions/checkout@v4`.
 
 ## Project structure
 
@@ -36,6 +51,7 @@ cmake --build build
 |---|---|
 | `include/` | Headers: Models, RayTrace, Aberrations, Paraxial, etc. |
 | `src/` | Implementation + `main.cpp` (CLI entry point) |
+| `ui/` | Flask web server + Jinja2 templates |
 | `examples/` | `.json` optical system definitions |
 | `checkout/` | Zemax reference output for manual comparison |
 | `third_party/` | nlohmann/json `json.hpp` |
