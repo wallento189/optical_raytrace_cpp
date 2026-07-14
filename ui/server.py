@@ -25,7 +25,7 @@ OUTPUTS.mkdir(parents=True, exist_ok=True)
 
 app = Flask(
     __name__,
-    template_folder=str(BASE / "templates"),
+    template_folder=str(BASE / "ui" / "templates"),
     static_folder=str(BASE / "static"),
 )
 
@@ -36,6 +36,16 @@ def handle_exception(e):
         return jsonify({"error": str(e)}), e.code
     import traceback
     return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
+
+def resolve_path(user_path, default=None):
+    """解析用户输入的路径: 绝对路径直接使用, 相对路径相对于 BASE 解析"""
+    if not user_path:
+        return default
+    p = Path(user_path)
+    if p.is_absolute():
+        return p
+    return (BASE / p).resolve()
+
 
 def run_binary(mode, args):
     cmd = [str(BINARY), mode] + args
@@ -66,7 +76,8 @@ def load_config():
 def save_config():
     data = request.get_json()
     fname = data.pop("_filename", "custom.json")
-    path = OUTPUTS / fname
+    path = resolve_path(fname, OUTPUTS / "custom.json")
+    path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     return jsonify({"ok": True, "path": str(path)})
@@ -94,9 +105,8 @@ def run():
             args.append("--print")
         out = config.get("output", "")
         if out:
-            out_path = Path(out)
-            if not out_path.is_absolute():
-                out_path = OUTPUTS / out_path.name
+            out_path = resolve_path(out)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
             args += ["--output", str(out_path)]
             out = str(out_path)
         stdout, stderr, rc = run_binary("compute", args)
@@ -119,9 +129,8 @@ def run():
             fin = str(fin_path)
             with open(fin_path, "w", encoding='utf-8') as f: f.write(data.get("finite_json", "{}"))
 
-        out_path = Path(out)
-        if not out_path.is_absolute():
-            out_path = OUTPUTS / out_path.name
+        out_path = resolve_path(out, OUTPUTS / "result_76.txt")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
         out = str(out_path)
 
         args = ["--infinity", inf, "--finite", fin, "--output", out]
@@ -139,9 +148,7 @@ def run():
 @app.route("/api/results")
 def get_results():
     fname = request.args.get("file", str(OUTPUTS / "result_76.txt"))
-    path = Path(fname)
-    if not path.is_absolute():
-        path = OUTPUTS / path.name
+    path = resolve_path(fname, OUTPUTS / "result_76.txt")
     if not path.exists():
         return jsonify({"error": f"No results file: {path}"}), 404
 
@@ -184,10 +191,8 @@ def get_results():
 @app.route("/api/download")
 def download():
     fname = request.args.get("file", "")
-    path = Path(fname)
-    if not path.is_absolute() and fname:
-        path = OUTPUTS / path.name
-    if path.exists():
+    path = resolve_path(fname, OUTPUTS / "result_76.txt")
+    if path and path.exists():
         return send_file(path, as_attachment=True, download_name=path.name)
     return jsonify({"error": "not found"}), 404
 

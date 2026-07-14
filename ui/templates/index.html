@@ -104,9 +104,9 @@ tr:hover { background:#1a1a3e; }
     </select>
     <button onclick="runPreview()" class="small">预览</button>
   </div>
-  <div class="row" style="margin-top:6px">
-    <div><label>输出文件路径</label><input id="output_path" value="outputs/result_76.txt" placeholder="outputs/result_76.txt"></div>
-    <div><label>输入文件路径 (compute模式)</label><input id="input_path" placeholder="examples/test_infinity.json"></div>
+   <div class="row" style="margin-top:6px">
+    <div><label>输出文件路径 (相对路径基于程序目录, 支持绝对路径如 C:/Users/...)</label><input id="output_path" value="outputs/result_76.txt" placeholder="outputs/result_76.txt 或 C:/Users/.../result.txt"></div>
+    <div><label>输入文件路径 (compute模式, 支持绝对路径)</label><input id="input_path" placeholder="examples/test_infinity.json 或 C:/Users/.../input.json"></div>
   </div>
   <div class="status" id="status">就绪</div>
 
@@ -121,7 +121,7 @@ tr:hover { background:#1a1a3e; }
   </div>
   <div style="margin-top:8px">
     <button class="small" onclick="saveConfig()">💾 保存配置</button>
-    <input id="save_filename" placeholder="custom.json" style="width:120px;display:inline;">
+    <input id="save_filename" placeholder="custom.json 或自定义路径" style="width:240px;display:inline;">
   </div>
 </div>
 

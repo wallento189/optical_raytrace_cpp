@@ -2,15 +2,18 @@
 
 ## 运行方法
 
-**已编译版本直接运行（免编译）：**
-
 ```bash
-# Web 图形界面
-python3 ui/server.py                            
+# 编译
+cmake -S . -B build
+cmake --build build
+
+# 运行（使用 config.json）
+./build/bin/optical_raytrace
+
+# 或直接 CLI
+./build/bin/optical_raytrace compute --input examples/test_infinity.json --output output.txt --print
+./build/bin/optical_raytrace compute76 --infinity examples/test_infinity.json --finite examples/test_finite.json --output output.txt
 ```
-
-运行依赖：Python 3 + Flask（Web UI 需要）。
-
 
 **注意：** `example_doublet_*.json` 中的折射率是占位符（`"PLEASE_FILL..."`），需替换为实际玻璃库数据后使用。`test_*.json` 包含 H-K9L / H-ZF2 的完整折射率，可直接运行。
 
