@@ -33,7 +33,7 @@ python3 build_release.py
 # 输出: dist/optical_raytrace_ui（可直接双击运行，无需 Python/编译器）
 ```
 
-**注意：** `example_doublet_*.json` 中的折射率是占位符（`"PLEASE_FILL..."`），需替换为实际玻璃库数据后使用。`test_*.json` 包含 H-K9L / H-ZF2 的完整折射率，可直接运行。
+**注意：** `test_*.json` 和 `example_doublet_*.json` 均包含 H-K9L / H-ZF2 的完整折射率数据，可直接运行。
 
 ## 输入文件格式（JSON）
 
