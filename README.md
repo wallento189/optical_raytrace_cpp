@@ -28,10 +28,8 @@ cmake --build build
 
 **打包为单文件可执行程序：**
 
-```bash
-python3 build_release.py
-# 输出: dist/optical_raytrace_ui（可直接双击运行，无需 Python/编译器）
-```
+optical_raytrace_ui（可直接双击运行，无需 Python/编译器）
+
 
 **注意：** `test_*.json` 和 `example_doublet_*.json` 均包含 H-K9L / H-ZF2 的完整折射率数据，可直接运行。
 
