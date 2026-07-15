@@ -190,7 +190,7 @@ let surfaces = [
 function renderForm(){
   var h='';
   materials.forEach(function(m,i){
-    h += '<div class="mtrl-row"><span>'+m.name+'</span>';
+    h += '<div class="mtrl-row"><input value="'+m.name+'" onchange="materials['+i+'].name=this.value" style="width:70px">';
     h += '<input value="'+m.nd+'" onchange="materials['+i+'].nd=this.value"> d';
     h += '<input value="'+m.nF+'" onchange="materials['+i+'].nF=this.value"> F';
     h += '<input value="'+m.nC+'" onchange="materials['+i+'].nC=this.value"> C';
