@@ -101,7 +101,11 @@ def run():
             if not os.path.isabs(inp):
                 inp = str(BASE / inp)
         else:
-            inp = str(EXAMPLES / "test_infinity.json") if (EXAMPLES / "test_infinity.json").exists() else str(EXAMPLES / "test_infinity.json")
+            inp = str(OUTPUTS / "_tmp_compute.json")
+            config_to_save = {k: v for k, v in config.items()
+                              if k not in ('input', 'output', '_filename')}
+            with open(inp, "w", encoding='utf-8') as f:
+                json.dump(config_to_save, f, indent=2, ensure_ascii=False)
         args = ["--input", inp]
         if print_config:
             args.append("--print")
