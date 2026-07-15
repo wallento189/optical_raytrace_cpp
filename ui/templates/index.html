@@ -363,6 +363,8 @@ async function runCompute(){
           $('status').textContent = '✗ 计算结果文件未生成. 错误: '+(j.stderr||'未知');
         }
         loadResults(j.output);
+      } else if(j.output){
+        loadResults(j.output);
       } else {
         var tbody = $('result_table').querySelector('tbody');
         tbody.innerHTML = '<tr><td colspan="5"><pre>'+j.stdout+'</pre></td></tr>';
