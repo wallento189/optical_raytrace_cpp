@@ -39,10 +39,21 @@ def handle_exception(e):
     import traceback
     return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
 
+def clean_path(user_path):
+    """去除路径两端的引号、空白字符"""
+    if not user_path:
+        return ""
+    s = str(user_path).strip()
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in ('"', "'"):
+        s = s[1:-1].strip()
+    return s
+
+
 def resolve_path(user_path, default=None):
     """解析用户输入的路径: 绝对路径直接使用, 相对路径相对于 BASE 解析"""
     if not user_path:
         return default
+    user_path = clean_path(user_path)
     p = Path(user_path)
     if p.is_absolute():
         return p
@@ -65,10 +76,13 @@ def index():
 
 @app.route("/api/load_config")
 def load_config():
-    fname = request.args.get("file", "")
-    path = EXAMPLES / fname
-    if not path.exists():
-        path = os.path.join(str(BASE), fname)
+    fname = clean_path(request.args.get("file", ""))
+    if os.path.isabs(fname):
+        path = Path(fname)
+    else:
+        path = EXAMPLES / fname
+        if not path.exists():
+            path = os.path.join(str(BASE), fname)
     if not os.path.exists(path):
         return jsonify({"error": f"File not found: {fname}"}), 404
     with open(path, encoding='utf-8') as f:
@@ -96,7 +110,7 @@ def run():
     out_path = OUTPUTS / "result_76.txt"
 
     if mode == "compute":
-        inp = config.get("input") or data.get("input", "")
+        inp = clean_path(config.get("input") or data.get("input", ""))
         if inp:
             if not os.path.isabs(inp):
                 inp = str(BASE / inp)
@@ -124,12 +138,14 @@ def run():
         out = config.get("output", str(OUTPUTS / "result_76.txt"))
 
         if inf:
+            inf = clean_path(inf)
             if not os.path.isabs(inf): inf = str(BASE / inf)
         else:
             inf = str(inf_path)
             with open(inf_path, "w", encoding='utf-8') as f: f.write(data.get("infinity_json", "{}"))
 
         if fin:
+            fin = clean_path(fin)
             if not os.path.isabs(fin): fin = str(BASE / fin)
         else:
             fin = str(fin_path)
