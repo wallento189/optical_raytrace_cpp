@@ -98,7 +98,7 @@ tr:hover { background:#1a1a3e; }
 
   <div style="margin-top:12px; display:flex; gap:8px;">
     <button onclick="runCompute()">▶ 运行</button>
-    <select id="run_mode">
+    <select id="run_mode" onchange="toggleConjugate()">
       <option value="compute76">compute76 (76项)</option>
       <option value="compute">compute (38项)</option>
     </select>
@@ -157,8 +157,14 @@ function byClass(cls){ return document.getElementsByClassName(cls); }
 
 function toggleConjugate(){
   var inf = $('object_at_infinity').value === 'true';
-  $('row_infinity').style.display = inf ? '' : 'none';
-  $('row_finite').style.display = inf ? 'none' : '';
+  var mode = $('run_mode').value;
+  if(mode === 'compute76'){
+    $('row_infinity').style.display = '';
+    $('row_finite').style.display = '';
+  } else {
+    $('row_infinity').style.display = inf ? '' : 'none';
+    $('row_finite').style.display = inf ? 'none' : '';
+  }
 }
 
 function switchTab(name){
@@ -212,14 +218,14 @@ function buildConfig(){
   var c = {};
   c.system_name = $('system_name').value;
   c.object_at_infinity = $('object_at_infinity').value === 'true';
-  if(c.object_at_infinity){
-    c.field_angle_deg = parseFloat($('field_angle_deg').value);
+  c.field_angle_deg = parseFloat($('field_angle_deg').value);
+  c.object_distance = parseFloat($('object_distance').value);
+  c.object_height = parseFloat($('object_height').value);
+  if(!c.object_at_infinity){
+    c.field_angle_deg = null;
+  } else {
     c.object_distance = null;
     c.object_height = null;
-  } else {
-    c.object_distance = parseFloat($('object_distance').value);
-    c.object_height = parseFloat($('object_height').value);
-    c.field_angle_deg = null;
   }
   c.entrance_pupil_position = parseFloat($('entrance_pupil_position').value);
   c.entrance_pupil_diameter = parseFloat($('entrance_pupil_diameter').value);
@@ -318,15 +324,28 @@ async function runCompute(){
   if(mode === 'compute76'){
     var infCopy = JSON.parse(JSON.stringify(c));
     infCopy.object_at_infinity = true;
+    infCopy.field_angle_deg = c.field_angle_deg || parseFloat($('field_angle_deg').value) || 3.0;
     infCopy.object_distance = null;
     infCopy.object_height = null;
-    if(!infCopy.field_angle_deg) infCopy.field_angle_deg = 3.0;
 
     var finCopy = JSON.parse(JSON.stringify(c));
     finCopy.object_at_infinity = false;
     finCopy.field_angle_deg = null;
-    if(!finCopy.object_distance) finCopy.object_distance = -500;
-    if(!finCopy.object_height) finCopy.object_height = 26.204;
+    finCopy.object_distance = c.object_distance || parseFloat($('object_distance').value) || -500;
+    finCopy.object_height = c.object_height || parseFloat($('object_height').value) || 26.204;
+
+    if(!confirm('compute76 将同时使用以下两组物距参数进行光线追迹：\n\n' +
+      '┌─ 无限远 ──────────────────────\n' +
+      '  │  半视场角: ' + infCopy.field_angle_deg.toFixed(1) + '°\n' +
+      '└───────────────────────────────\n\n' +
+      '┌─ 有限距 ──────────────────────\n' +
+      '  │  物距: ' + finCopy.object_distance.toFixed(1) + 'mm\n' +
+      '  │  物高: ' + finCopy.object_height.toFixed(3) + 'mm\n' +
+      '└───────────────────────────────\n\n' +
+      '继续运行？点击「确定」运行，点击「取消」返回修改参数。')){
+      $('status').textContent = '已取消。请在 compute76 模式下填写两组物距参数后重新运行。';
+      return;
+    }
 
     body.infinity_json = JSON.stringify(infCopy);
     body.finite_json = JSON.stringify(finCopy);
